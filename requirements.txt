@@ -1,0 +1,4 @@
+mcp>=1.12,<2
+langchain>=1.0,<2
+langchain-openai>=1.0,<2
+langchain-mcp-adapters>=0.3.2,<0.4
