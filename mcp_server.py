@@ -2,14 +2,14 @@
 
 from contextlib import closing
 from datetime import datetime, timezone
-from decimal import Decimal, ROUND_HALF_UP, localcontext
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP, localcontext
 import json
 from pathlib import Path
 import sqlite3
 from typing import Annotated
 
 from mcp.server.fastmcp import FastMCP
-from pydantic import Field
+from pydantic import BeforeValidator, Field
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -72,24 +72,46 @@ def get_inventory_and_orders() -> dict[str, object]:
     }
 
 
+def validate_euro_price(value: object) -> Decimal:
+    """Prueft einen Europreis und wandelt ihn ohne Float-Rechnung in Decimal um."""
+    if isinstance(value, bool) or not isinstance(value, (int, float, str, Decimal)):
+        raise ValueError("Der Europreis muss eine Zahl mit hoechstens zwei Nachkommastellen sein.")
+    try:
+        price = value if isinstance(value, Decimal) else Decimal(str(value))
+    except InvalidOperation as error:
+        raise ValueError("Der Europreis ist keine gueltige Dezimalzahl.") from error
+    if not price.is_finite():
+        raise ValueError("Der Europreis muss endlich sein; NaN und Infinity sind ungueltig.")
+    if price < 0:
+        raise ValueError("Der Europreis darf nicht negativ sein.")
+    if price.as_tuple().exponent < -2:
+        raise ValueError("Der Europreis darf hoechstens zwei Nachkommastellen haben.")
+    return price
+
+
 @mcp.tool()
 def calculate_bulk_discount(
     quantity: Annotated[
         int, Field(strict=True, gt=0, description="Positive ganze Anzahl Paar Socken")
     ],
-    unit_price_cents: Annotated[
-        int, Field(strict=True, ge=0, description="Nicht negativer Stueckpreis in Cent")
+    unit_price_euros: Annotated[
+        Decimal,
+        BeforeValidator(validate_euro_price),
+        Field(description="Nicht negativer Euro-Stueckpreis, z. B. 12.50; hoechstens zwei Nachkommastellen"),
     ],
-) -> dict[str, int]:
+) -> dict[str, int | str]:
     """Berechnet Mengenrabatt fuer die gesamte Menge, ohne Daten zu veraendern.
 
-    quantity und unit_price_cents muessen ganzzahlig sein, quantity > 0 und
-    unit_price_cents >= 0. Unter 10 Paar: 0 %, ab 10: 5 %, ab 50: 10 %,
-    ab 100: 15 %. Gibt quantity, discount_percent, amount_before_discount_cents,
-    discount_amount_cents und final_amount_cents zurueck.
-    Alle Geldbetraege sind ganze Cent. Der Rabatt wird mit Decimal berechnet
-    und mit ROUND_HALF_UP auf ganze Cent gerundet.
+    quantity ist eine positive ganze Anzahl. unit_price_euros ist ein nicht
+    negativer Europreis mit hoechstens zwei Nachkommastellen. Unter 10 Paar:
+    0 %, ab 10: 5 %, ab 50: 10 %, ab 100: 15 %. Der Rabatt gilt fuer die
+    gesamte Menge. Gibt quantity, discount_percent sowie
+    amount_before_discount_euros, discount_amount_euros und final_amount_euros
+    als Dezimalstrings mit genau zwei Nachkommastellen zurueck. Der Rabatt
+    wird mit ROUND_HALF_UP auf Cent gerundet. Preise duerfen auch als
+    Dezimalstring uebergeben werden, damit alle Stellen exakt erhalten bleiben.
     """
+    unit_price_euros = validate_euro_price(unit_price_euros)
     if quantity >= 100:
         discount_percent = 15
     elif quantity >= 50:
@@ -100,19 +122,23 @@ def calculate_bulk_discount(
         discount_percent = 0
 
     with localcontext() as context:
-        context.prec = len(str(quantity)) + len(str(unit_price_cents)) + 10
-        amount_before = Decimal(quantity) * Decimal(unit_price_cents)
-        discount = (amount_before * Decimal(discount_percent) / Decimal(100)).quantize(
+        context.prec = max(
+            28, len(unit_price_euros.as_tuple().digits) + len(str(quantity)) + 10
+        )
+        unit_price_cents = int(unit_price_euros * Decimal(100))
+        amount_before_cents = quantity * unit_price_cents
+        discount_cents = (Decimal(amount_before_cents) * Decimal(discount_percent) / Decimal(100)).quantize(
             Decimal("1"), rounding=ROUND_HALF_UP
         )
-        final_amount = amount_before - discount
+        discount_cents = int(discount_cents)
+        final_amount_cents = amount_before_cents - discount_cents
 
     return {
         "quantity": quantity,
         "discount_percent": discount_percent,
-        "amount_before_discount_cents": int(amount_before),
-        "discount_amount_cents": int(discount),
-        "final_amount_cents": int(final_amount),
+        "amount_before_discount_euros": f"{amount_before_cents // 100}.{amount_before_cents % 100:02d}",
+        "discount_amount_euros": f"{discount_cents // 100}.{discount_cents % 100:02d}",
+        "final_amount_euros": f"{final_amount_cents // 100}.{final_amount_cents % 100:02d}",
     }
 
 

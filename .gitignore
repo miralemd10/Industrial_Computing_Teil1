@@ -1,0 +1,15 @@
+# Virtuelle Umgebungen und Python-Cache
+.venv/
+.venv-litellm/
+__pycache__/
+*.pyc
+
+# Lokal erzeugte Daten und Ausführungsprotokolle
+/data/lager.db
+/logs/audit.jsonl
+/execution_log.txt
+
+# Lokale Zugangsdaten; Beispielkonfiguration beibehalten
+.env
+.env.*
+!.env.example

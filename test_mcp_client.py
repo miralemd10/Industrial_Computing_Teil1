@@ -3,6 +3,7 @@
 import argparse
 import asyncio
 from datetime import datetime, timedelta
+from decimal import Decimal, ROUND_HALF_UP
 import json
 from pathlib import Path
 import sys
@@ -22,6 +23,21 @@ async def call_tool(
     assert not result.isError, f"{name}: {result.content}"
     assert result.structuredContent is not None, f"{name}: Ergebnis fehlt"
     return result.structuredContent
+
+
+def expected_discount(quantity: int, price_euros: object, percent: int) -> dict[str, object]:
+    amount = Decimal(str(price_euros)) * quantity
+    discount = (amount * Decimal(percent) / Decimal(100)).quantize(
+        Decimal("0.01"), rounding=ROUND_HALF_UP
+    )
+    final = amount - discount
+    return {
+        "quantity": quantity,
+        "discount_percent": percent,
+        "amount_before_discount_euros": f"{amount:.2f}",
+        "discount_amount_euros": f"{discount:.2f}",
+        "final_amount_euros": f"{final:.2f}",
+    }
 
 
 async def main(read_only: bool = False) -> None:
@@ -49,6 +65,10 @@ async def main(read_only: bool = False) -> None:
             assert all(tool.description for tool in tools)
             print("Tool-Erkennung: genau drei Tools mit Beschreibungen.")
 
+            discount_tool = next(tool for tool in tools if tool.name == "calculate_bulk_discount")
+            assert discount_tool.inputSchema["required"] == ["quantity", "unit_price_euros"]
+            assert set(discount_tool.inputSchema["properties"]) == {"quantity", "unit_price_euros"}
+
             inventory = await call_tool(session, "get_inventory_and_orders", {})
             assert inventory["open_order_count"] == 3
             assert inventory["shipped_order_count"] == 2
@@ -65,48 +85,77 @@ async def main(read_only: bool = False) -> None:
                 assert all(product[field] for field in ("name", "color", "size"))
             print("Lager: 4 Produkte, 3 offene, 2 versendete, 5 Bestellungen insgesamt; Mengen und freie Bestaende korrekt.")
 
-            for quantity, percent in ((9, 0), (10, 5), (49, 5), (50, 10),
-                                      (99, 10), (100, 15)):
-                discount = await call_tool(session, "calculate_bulk_discount", {
-                    "quantity": quantity, "unit_price_cents": 100,
+            cases = (
+                (5, 3.21, 0), (25, 3.21, 5), (75, 3.21, 10), (125, 3.21, 15),
+                (9, 1.00, 0), (10, 1.00, 5), (11, 1.00, 5),
+                (49, 1.00, 5), (50, 1.00, 10), (51, 1.00, 10),
+                (99, 1.00, 10), (100, 1.00, 15), (101, 1.00, 15),
+            )
+            for quantity, price, percent in cases:
+                result = await call_tool(session, "calculate_bulk_discount", {
+                    "quantity": quantity, "unit_price_euros": price,
                 })
-                amount_before = quantity * 100
-                discount_amount = quantity * percent
-                assert discount == {
-                    "quantity": quantity,
-                    "discount_percent": percent,
-                    "amount_before_discount_cents": amount_before,
-                    "discount_amount_cents": discount_amount,
-                    "final_amount_cents": amount_before - discount_amount,
-                }
-                print(f"Rabatt: {quantity} Paar -> {percent} %, Endbetrag {discount['final_amount_cents']} Cent.")
+                assert result == expected_discount(quantity, price, percent)
 
-            rounded = await call_tool(session, "calculate_bulk_discount", {
-                "quantity": 10, "unit_price_cents": 1,
+            example = await call_tool(session, "calculate_bulk_discount", {
+                "quantity": 10, "unit_price_euros": 12.50,
             })
-            assert rounded["discount_amount_cents"] == 1
-            assert rounded["final_amount_cents"] == 9
+            assert example == {
+                "quantity": 10, "discount_percent": 5,
+                "amount_before_discount_euros": "125.00",
+                "discount_amount_euros": "6.25", "final_amount_euros": "118.75",
+            }
+            half_cent = await call_tool(session, "calculate_bulk_discount", {
+                "quantity": 10, "unit_price_euros": 0.01,
+            })
+            assert half_cent == {
+                "quantity": 10, "discount_percent": 5,
+                "amount_before_discount_euros": "0.10",
+                "discount_amount_euros": "0.01", "final_amount_euros": "0.09",
+            }
+            string_price = await call_tool(session, "calculate_bulk_discount", {
+                "quantity": 10, "unit_price_euros": "12.50",
+            })
+            assert string_price == example
             free = await call_tool(session, "calculate_bulk_discount", {
-                "quantity": 10, "unit_price_cents": 0,
+                "quantity": 10, "unit_price_euros": 0,
             })
-            assert free["final_amount_cents"] == 0
+            assert free == expected_discount(10, 0, 5)
+            print("Europreise: Staffelgrenzen, Beispiel 12.50, Rundung bei 0.01 und Preis 0 bestanden.")
 
-            for arguments in (
-                {"quantity": 0, "unit_price_cents": 100},
-                {"quantity": -1, "unit_price_cents": 100},
-                {"quantity": 1, "unit_price_cents": -1},
-                {"quantity": 1.5, "unit_price_cents": 100},
-                {"quantity": 1, "unit_price_cents": 1.5},
-                {"quantity": True, "unit_price_cents": 100},
-            ):
+            invalid_inputs = (
+                {"quantity": 0, "unit_price_euros": 1.00},
+                {"quantity": -1, "unit_price_euros": 1.00},
+                {"quantity": 10, "unit_price_euros": -1.00},
+                {"quantity": 10, "unit_price_euros": True},
+                {"quantity": 10, "unit_price_euros": False},
+                {"quantity": 10, "unit_price_euros": 1.001},
+                {"quantity": 10, "unit_price_euros": "12.500"},
+                {"quantity": 10, "unit_price_euros": float("nan")},
+                {"quantity": 10, "unit_price_euros": float("inf")},
+                {"quantity": 10, "unit_price_euros": float("-inf")},
+                {"quantity": 10, "unit_price_euros": None},
+                {"quantity": 10, "unit_price_euros": "ungueltig"},
+                {"quantity": 1.5, "unit_price_euros": 1.00},
+                {"quantity": True, "unit_price_euros": 1.00},
+                {"unit_price_euros": 1.00},
+                {"quantity": 10},
+                {},
+            )
+            for arguments in invalid_inputs:
                 result = await session.call_tool("calculate_bulk_discount", arguments)
                 assert result.isError, f"Ungueltige Eingaben akzeptiert: {arguments}"
+                if arguments.get("unit_price_euros") == 1.001:
+                    error_text = " ".join(
+                        item.text for item in result.content if item.type == "text"
+                    )
+                    assert "hoechstens zwei Nachkommastellen" in error_text
             for description in ("", " \n\t "):
                 result = await session.call_tool("append_audit_event", {
                     "description": description,
                 })
                 assert result.isError, "Leere Ereignisbeschreibung akzeptiert"
-            print("Validierung: ungueltige Eingaben abgewiesen; halber Cent aufgerundet, Preis 0 erlaubt.")
+            print(f"Validierung: {len(invalid_inputs)} ungueltige Eingaben abgewiesen.")
 
             if read_only:
                 print("Audit-Schreibtest uebersprungen (--read-only).")
