@@ -1,0 +1,24 @@
+Ausführungslog – Homework Part 1
+1. Datenbank-Tool: get_inventory_and_orders
+Du: wie viele bestellungen sind offen?
+
+[Tool: get_inventory_and_orders] Argumente: {}
+[Tool-Ergebnis] "content=[{'type': 'text', 'text': '{\\n  \"open_order_count\": 3,\\n  \"shipped_order_count\": 2,\\n  \"total_order_count\": 5,\\n  \"products\": [\\n    {\\n      \"product_id\": 1,\\n      \"name\": \"Baumwollsocken\",\\n      \"color\": \"schwarz\",\\n      \"size\": \"39-42\",\\n      \"physical_stock\": 30,\\n      \"open_order_quantity\": 3,\\n      \"free_stock\": 27\\n    },\\n    {\\n      \"product_id\": 2,\\n      \"name\": \"Baumwollsocken\",\\n      \"color\": \"weiss\",\\n      \"size\": \"43-46\",\\n      \"physical_stock\": 25,\\n      \"open_order_quantity\": 3,\\n      \"free_stock\": 22\\n    },\\n    {\\n      \"product_id\": 3,\\n      \"name\": \"Sportsocken\",\\n      \"color\": \"blau\",\\n      \"size\": \"39-42\",\\n      \"physical_stock\": 35,\\n      \"open_order_quantity\": 1,\\n      \"free_stock\": 34\\n    },\\n    {\\n      \"product_id\": 4,\\n      \"name\": \"Wollsocken\",\\n      \"color\": \"grau\",\\n      \"size\": \"43-46\",\\n      \"physical_stock\": 20,\\n      \"open_order_quantity\": 2,\\n      \"free_stock\": 18\\n    }\\n  ]\\n}', 'id': 'lc_77f7da34-44d7-4aac-8432-60e4e921ce2c'}] name='get_inventory_and_orders' tool_call_id='call_278231__thought__EqADCp0DAWkUfRPq5EQj3IXcIdGsY6o2KzC7gBxl1TxS8gyiHG8KPSPa+X0CuKQczPT42da2N6S8RTYnEi1IG4KGL9v9KM9/7ed34aesC44QgomWY8oUL2wIu/KQsraqMVtz14EdqtVSpezADx3cKibLNr5HOIVUXFZeyCprlJCqBX/lpFohoMnbu84yoISByk6f5QugG9aWgp+6WQN0VVFFgq2nWEjxm5MsS8tD2/iGVHl2/1TvVHyRsk99m1fH8CMvajeNimb+mc3G5XWf5PGTecCXyTMlKUWJhLI58VmEbfy1Upyv750pPz2aAqBA05alk9DdNVW7gPdpBmm5IxqYgg2lsWYp8e6ofQBFNBdwHdxYIT5s5dyA5vQHu4ozOeRNXYEqQxF2A9c3vMe2+W0aZae8FEmygTvCy1H9Mv8RO/s+Fd4E3woDNlssziSQmEk4A8GSrHwqmyry4FOpcmKN2cKYs412tj6ZWnLCGw8+c9Hr+e0WXkum9VqCBTVzTPMHBEMH4wTnla0F7hYlovzQ4u5LUHm2+hvfMdWEmclKlSk=' artifact={'structured_content': {'open_order_count': 3, 'shipped_order_count': 2, 'total_order_count': 5, 'products': [{'product_id': 1, 'name': 'Baumwollsocken', 'color': 'schwarz', 'size': '39-42', 'physical_stock': 30, 'open_order_quantity': 3, 'free_stock': 27}, {'product_id': 2, 'name': 'Baumwollsocken', 'color': 'weiss', 'size': '43-46', 'physical_stock': 25, 'open_order_quantity': 3, 'free_stock': 22}, {'product_id': 3, 'name': 'Sportsocken', 'color': 'blau', 'size': '39-42', 'physical_stock': 35, 'open_order_quantity': 1, 'free_stock': 34}, {'product_id': 4, 'name': 'Wollsocken', 'color': 'grau', 'size': '43-46', 'physical_stock': 20, 'open_order_quantity': 2, 'free_stock': 18}]}}"
+
+Assistent: Aktuell sind **3 Bestellungen** offen.
+
+2. Rabatt-Tool: calculate_bulk_discount
+Du: Was kosten 50 Paar Socken zu je 12.50 Euro nach Mengenrabatt? Nenne Ausgangsbetrag, Rabatt und Endbetrag.
+
+[Tool: calculate_bulk_discount] Argumente: "{'quantity': 50, 'unit_price_euros': '12.50'}"
+[Tool-Ergebnis] "content=[{'type': 'text', 'text': '{\\n  \"quantity\": 50,\\n  \"discount_percent\": 10,\\n  \"amount_before_discount_euros\": \"625.00\",\\n  \"discount_amount_euros\": \"62.50\",\\n  \"final_amount_euros\": \"562.50\"\\n}', 'id': 'lc_102b9c4b-0d61-4951-9837-16df1ee20477'}] name='calculate_bulk_discount' tool_call_id='call_253840__thought__EoADCv0CAWkUfRP56aYXKGkaIB+aNSzcc4R0kFzDIVLrhWUC86Xk3exmQi/4UJapfb2jamGk/Dy9QUR4suCMFr9TnnpD8FUUUKoPJJeTFtUnRzpP5hiYPxzRlGaMjGxYYBx6W/6X+h9Xr0P5XQC+i38BSc3+c5qczwbnuPSfxZkCqa/4DkdNtHoz+ZoXj+oFQaf9m0H2LpdB/SYX24fQrTkhJS/2kDgVfb8NQXKSzylSAnUH6CE6sGF0FiPYI7W1IHmEesyQ0xe+P0ofsxjVXnEKcgAAHukiIGj8KllF1R8+W765KhjEMJ6Y3nWl75+P2MC5JKWfJI9q+OVa726jL7nttv29be+kiz4X9TikHwKrX5Ws/SkkZwjabFyxMu8vSQRSlk8OkWsabvgsl/EIRBS3hR3O2yPJ3P5D3+g8A99AGQmGOQG+rG9lPzTKORMEzr2gOzLNOKqKJqAJ8tO2i1j4m+VWH66Y7uTvtHLqBbENH8NC80fwNKqYxugH/PqRd7Nj' artifact={'structured_content': {'quantity': 50, 'discount_percent': 10, 'amount_before_discount_euros': '625.00', 'discount_amount_euros': '62.50', 'final_amount_euros': '562.50'}}"
+
+Assistent: Hier ist die Berechnung für 50 Paar Socken zu je 12,50 Euro (bei 50 Paar gilt ein Mengenrabatt von 10 %):
+
+* **Ausgangsbetrag:** 625,00 €
+* **Rabatt (10 %):** 62,50 €
+* **Endbetrag:** 562,50 €
+
+3. Audit-Tool: append_audit_event
+Get-Content C:\GitHub\Industrial_Computing_Frischtest\logs\audit.jsonl -Tail 1
+{"timestamp": "2026-10-06T15:04:02.048+00:00", "description": "Lagerbestand und Mengenrabatt wurden geprüft."}
