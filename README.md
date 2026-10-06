@@ -75,33 +75,16 @@ den Proxy mit `Strg+C` beenden.
 
 ## Lokaler Test ohne Modell-API-Key
 
-Nach der Datenbankinitialisierung kann der Testclient direkt laufen; er
-benötigt weder API-Schlüssel noch einen laufenden LiteLLM-Proxy und startet
-den MCP-Server selbst:
+`test_mcp_client.py` habe ich zur eigenen Überprüfung der MCP-Tools erstellt.
+Nach der Datenbankinitialisierung prüft der Test Lagerdaten, Rabattberechnung
+und Audit-Protokollierung ohne Modell-API-Key oder laufenden LiteLLM-Proxy:
 
 ```powershell
 .\.venv\Scripts\python.exe .\test_mcp_client.py
 ```
 
-Der Test prüft Tool-Erkennung, Lagerdaten, Rabattstaffeln, Rundung und ungültige
-Eingaben. **Er hängt einen Testeintrag an `logs/audit.jsonl` an.** Die Datenbank
-bleibt unverändert. Die Lagerprüfungen erwarten die unveränderten Beispieldaten.
-Für eine Prüfung ohne Audit-Schreibtest gibt es:
-
-```powershell
-.\.venv\Scripts\python.exe .\test_mcp_client.py --read-only
-```
-
-Eine zusätzliche Import- und Tool-Erkennungsprüfung ohne Modellaufruf ist:
-
-```powershell
-.\.venv\Scripts\python.exe .\agent.py --check
-```
-
-`execution_log.txt` enthält einen früheren lokalen MCP-Testlauf mit
-`--read-only` und Cent-Ausgaben. Er belegt keinen Test des aktuellen
-Euro-Testclients. LLM- und interaktive Agententests stehen noch aus;
-auch der Zugriff auf das konfigurierte Gemini-Modell ist noch ungeprüft.
+Dabei wird ein Testeintrag an `logs/audit.jsonl` angehängt.
+Die Lagerdatenbank bleibt unverändert.
 
 ## Beispielfragen
 
